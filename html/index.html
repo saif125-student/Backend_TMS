@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMS API Endpoint Tester</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f7f2;
+      --panel: #fbfdf9;
+      --ink: #112414;
+      --muted: #49604c;
+      --line: #c8d8c8;
+      --accent: #2e7d32;
+      --accent-2: #0d6e5e;
+      --danger: #be3f3f;
+      --shadow: 0 14px 35px rgba(20, 58, 24, 0.12);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 10%, rgba(82, 164, 90, 0.15), transparent 36%),
+        radial-gradient(circle at 90% 15%, rgba(13, 110, 94, 0.14), transparent 30%),
+        linear-gradient(165deg, #eef5e9 0%, #f7faf2 50%, #edf6f0 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      width: min(1400px, 96vw);
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .left {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .right {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    h1, h2 { margin: 0 0 10px; line-height: 1.2; }
+    h1 { font-size: 1.25rem; }
+    h2 {
+      font-size: 1rem;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .grid { display: grid; gap: 10px; }
+    .two { grid-template-columns: 1fr 1fr; }
+
+    label {
+      display: block;
+      font-size: 0.86rem;
+      margin-bottom: 5px;
+      color: var(--muted);
+    }
+
+    input, textarea, select, button {
+      width: 100%;
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    textarea { min-height: 130px; resize: vertical; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      transition: transform 0.16s ease, filter 0.16s ease;
+      font-weight: 600;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(0.98);
+    }
+
+    .primary { background: linear-gradient(120deg, var(--accent), var(--accent-2)); color: #fff; }
+    .ghost { background: #edf5ee; color: var(--ink); border: 1px solid #bfd0c1; }
+    .danger { background: var(--danger); color: #fff; }
+
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .chip {
+      border-radius: 999px;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .m-get { background: #2f8f57; }
+    .m-post { background: #1379b7; }
+    .m-put { background: #6e58bf; }
+    .m-patch { background: #c17a09; }
+    .m-delete { background: #c03f3f; }
+
+    .endpoint-list {
+      max-height: 54vh;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .endpoint-item {
+      width: 100%;
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #edf2ed;
+      background: transparent;
+      color: var(--ink);
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 10px;
+      align-items: center;
+      border-radius: 0;
+    }
+
+    .endpoint-item:last-child { border-bottom: none; }
+    .endpoint-item.active { background: #eef7ed; }
+
+    .endpoint-item .route {
+      font-size: 0.85rem;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .status { margin-top: 8px; font-size: 0.88rem; color: var(--muted); min-height: 1.2em; }
+
+    pre {
+      margin: 0;
+      background: #0d1f12;
+      color: #d8f6df;
+      border-radius: 14px;
+      padding: 14px;
+      max-height: 52vh;
+      overflow: auto;
+      border: 1px solid #254b2e;
+      box-shadow: inset 0 0 0 1px rgba(110, 210, 136, 0.08);
+    }
+
+    .helper { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .hidden { display: none; }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      .left { position: static; max-height: none; }
+      .two { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="left card">
+      <h1>TMS API Tester</h1>
+      <div class="helper">Test all endpoints from one screen.</div>
+
+      <div class="grid" style="margin-top: 12px;">
+        <div>
+          <label for="baseUrl">Base URL</label>
+          <input id="baseUrl" value="http://localhost:3000" />
+        </div>
+
+        <div>
+          <label for="accessToken">Access Token (Bearer)</label>
+          <textarea id="accessToken" rows="3" placeholder="Paste JWT token"></textarea>
+        </div>
+
+        <div>
+          <label for="refreshToken">Refresh Token</label>
+          <input id="refreshToken" placeholder="Stored after login if returned" />
+        </div>
+
+        <div class="grid two">
+          <button class="ghost" id="btnSaveTokens">Save Tokens</button>
+          <button class="danger" id="btnClearTokens">Clear Tokens</button>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 16px;">Endpoints</h2>
+      <div id="endpointList" class="endpoint-list"></div>
+    </aside>
+
+    <main class="right card">
+      <section>
+        <h2>Request Builder</h2>
+        <div class="grid two">
+          <div>
+            <label for="requestName">Endpoint</label>
+            <input id="requestName" readonly />
+          </div>
+          <div>
+            <label for="requestMethod">Method</label>
+            <input id="requestMethod" readonly class="mono" />
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top: 10px;">
+          <div>
+            <label for="requestPath">Path</label>
+            <input id="requestPath" class="mono" />
+          </div>
+
+          <div>
+            <label for="requestQuery">Query Params (JSON object)</label>
+            <textarea id="requestQuery" class="mono" rows="3">{}</textarea>
+          </div>
+
+          <div>
+            <label for="requestBody">Body (JSON object)</label>
+            <textarea id="requestBody" class="mono">{}</textarea>
+          </div>
+
+          <div class="grid two">
+            <div>
+              <label for="contentType">Content Type</label>
+              <select id="contentType">
+                <option value="application/json">application/json</option>
+                <option value="multipart/form-data">multipart/form-data</option>
+              </select>
+            </div>
+            <div>
+              <label for="autoAuth">Auth Header</label>
+              <select id="autoAuth">
+                <option value="yes">Attach Bearer Token</option>
+                <option value="no">Do Not Attach</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="multipartBlock" class="grid hidden">
+            <div>
+              <label for="profileFile">profile file (single)</label>
+              <input id="profileFile" type="file" />
+            </div>
+            <div>
+              <label for="documentFiles">documents file(s)</label>
+              <input id="documentFiles" type="file" multiple />
+            </div>
+            <div class="helper">
+              For employee creation, include a field named <span class="mono">data</span> in Body containing a JSON string.
+            </div>
+          </div>
+
+          <div class="grid two">
+            <button class="primary" id="btnSend">Send Request</button>
+            <button class="ghost" id="btnCopyCurl">Copy cURL</button>
+          </div>
+
+          <div class="status" id="statusLine"></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Quick Auth</h2>
+        <div class="grid two">
+          <div>
+            <label for="loginEmail">Login Email</label>
+            <input id="loginEmail" placeholder="admin@example.com" />
+          </div>
+          <div>
+            <label for="loginPassword">Login Password</label>
+            <input id="loginPassword" type="password" placeholder="Password" />
+          </div>
+        </div>
+        <div class="grid two" style="margin-top: 10px;">
+          <button class="primary" id="btnLogin">Login (/users/login)</button>
+          <button class="ghost" id="btnRefresh">Refresh (/users/refresh-token)</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Response</h2>
+        <div class="chip-row" id="responseMeta"></div>
+        <pre id="responseOutput" class="mono">Awaiting request...</pre>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const endpoints = [
+
+      { name: "User Register", method: "POST", path: "/users/register", auth: false, contentType: "application/json", body: { name: "Test User", email: "test.user@example.com", password: "Password123!", roleId: "1" } },
+      { name: "User Login", method: "POST", path: "/users/login", auth: false, contentType: "application/json", body: { email: "test.user@example.com", password: "Password123!" } },
+      { name: "User Refresh Token", method: "POST", path: "/users/refresh-token", auth: false, contentType: "application/json", body: { refreshToken: "" } },
+      { name: "User Logout", method: "POST", path: "/users/logout", auth: false, contentType: "application/json", body: { refreshToken: "" } },
+      { name: "User Me", method: "GET", path: "/users/me", auth: true, contentType: "application/json", body: {} },
+      { name: "User Create (Authorized)", method: "POST", path: "/users/create", auth: true, contentType: "application/json", body: { name: "Created User", email: "created.user@example.com", password: "Password123!", roleId: "2" } },
+      { name: "User Update", method: "PUT", path: "/users/update/:id", auth: true, contentType: "application/json", body: { name: "Updated User" } },
+      { name: "User Delete", method: "DELETE", path: "/users/delete/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Permission Create", method: "POST", path: "/permissions", auth: true, contentType: "application/json", body: { name: "permission.create", guardName: "permission.create", groupName: "permission" } },
+      { name: "Permission List", method: "GET", path: "/permissions", auth: true, contentType: "application/json", body: {} },
+      { name: "Permission Update", method: "PUT", path: "/permissions/:id", auth: true, contentType: "application/json", body: { name: "permission.edit" } },
+      { name: "Permission Delete", method: "DELETE", path: "/permissions/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Role Create", method: "POST", path: "/roles", auth: true, contentType: "application/json", body: { name: "Manager", guardName: "manager" } },
+      { name: "Role List", method: "GET", path: "/roles", auth: true, contentType: "application/json", body: {} },
+      { name: "Role Update", method: "PUT", path: "/roles/:id", auth: true, contentType: "application/json", body: { name: "Senior Manager" } },
+      { name: "Role Delete", method: "DELETE", path: "/roles/:id", auth: true, contentType: "application/json", body: {} },
+      { name: "Role Assign Permissions", method: "POST", path: "/roles/assign-permissions", auth: true, contentType: "application/json", body: { roleId: "1", permissionIds: ["1", "2"] } },
+
+      { name: "Admin Create", method: "POST", path: "/admins/create", auth: true, contentType: "multipart/form-data", body: { name: "System Admin", email: "sys.admin@example.com", password: "Password123!", phone: "03000000000", roleId: "1" } },
+      { name: "Admin List", method: "GET", path: "/admins", auth: true, contentType: "application/json", body: {} },
+      { name: "Admin Update", method: "PUT", path: "/admins/:id", auth: true, contentType: "multipart/form-data", body: { name: "Updated Admin", phone: "03111111111" } },
+      { name: "Admin Delete", method: "DELETE", path: "/admins/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Department Create", method: "POST", path: "/departments", auth: true, contentType: "application/json", body: { name: "Finance", description: "Finance Department" } },
+      { name: "Department List", method: "GET", path: "/departments", auth: true, contentType: "application/json", body: {} },
+      { name: "Department Update", method: "PUT", path: "/departments/:id", auth: true, contentType: "application/json", body: { name: "Finance Updated" } },
+      { name: "Department Delete", method: "DELETE", path: "/departments/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Designation Create", method: "POST", path: "/designations", auth: true, contentType: "application/json", body: { name: "Team Lead", departmentId: "1", description: "Team lead role" } },
+      { name: "Designation List", method: "GET", path: "/designations", auth: true, contentType: "application/json", body: {} },
+      { name: "Designation Update", method: "PUT", path: "/designations/:id", auth: true, contentType: "application/json", body: { name: "Senior Team Lead" } },
+      { name: "Designation Delete", method: "DELETE", path: "/designations/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Event Create", method: "POST", path: "/events", auth: true, contentType: "application/json", body: { departmentId: "1", title: "Quarterly Planning", start: "2026-06-20T10:00:00", end: "2026-06-20T11:00:00", allDay: false, backgroundColor: "#2e7d32", description: "Quarterly planning meeting" } },
+      { name: "Event List", method: "GET", path: "/events", auth: true, contentType: "application/json", body: {} },
+      { name: "Event Get By ID", method: "GET", path: "/events/:id", auth: true, contentType: "application/json", body: {} },
+      { name: "Event Update", method: "PUT", path: "/events/:id", auth: true, contentType: "application/json", body: { title: "Updated Planning Meeting" } },
+      { name: "Event Delete", method: "DELETE", path: "/events/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Employee Create", method: "POST", path: "/employees/create", auth: true, contentType: "multipart/form-data", body: { data: JSON.stringify({ name: "Employee One", email: "employee.one@example.com", password: "Password123!", roleId: "1", designationId: "1", departmentIds: ["1"], documents: [] }) } },
+
+      { name: "Project Create", method: "POST", path: "/projects", auth: true, contentType: "application/json", body: { name: "Project A", description: "Initial project" } },
+      { name: "Project List", method: "GET", path: "/projects", auth: true, contentType: "application/json", body: {} },
+      { name: "Project Update", method: "PUT", path: "/projects/:id", auth: true, contentType: "application/json", body: { name: "Project A Updated" } },
+      { name: "Project Delete", method: "DELETE", path: "/projects/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Task Create", method: "POST", path: "/tasks", auth: true, contentType: "application/json", body: { name: "Build API", projectId: "1", departmentId: "1", employeeId: "1", hours: 2, minutes: 30 } },
+      { name: "Task Options", method: "GET", path: "/tasks/options", auth: true, contentType: "application/json", body: {}, query: {} },
+      { name: "Task List By Employee", method: "GET", path: "/tasks/employee/:employeeId", auth: true, contentType: "application/json", body: {} },
+      { name: "Task List By Assigner", method: "GET", path: "/tasks/assigner/:assignerId", auth: true, contentType: "application/json", body: {} },
+      { name: "Task List By Project", method: "GET", path: "/tasks/project/:projectId", auth: true, contentType: "application/json", body: {} },
+      { name: "Task List", method: "GET", path: "/tasks", auth: true, contentType: "application/json", body: {} },
+      { name: "Task Get By ID", method: "GET", path: "/tasks/:id", auth: true, contentType: "application/json", body: {} },
+      { name: "Task Update Status", method: "PATCH", path: "/tasks/:id/status", auth: true, contentType: "application/json", body: { status: "Completed" } },
+      { name: "Task Update", method: "PUT", path: "/tasks/:id", auth: true, contentType: "application/json", body: { name: "Build API Updated" } },
+      { name: "Task Delete", method: "DELETE", path: "/tasks/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Todo Create", method: "POST", path: "/todos", auth: true, contentType: "application/json", body: { employeeId: "1", title: "Follow up", description: "Call the client", priority: "Medium", sortOrder: 0 } },
+      { name: "Todo Options", method: "GET", path: "/todos/options", auth: true, contentType: "application/json", body: {} },
+      { name: "Todo List By Employee", method: "GET", path: "/todos/employee/:employeeId", auth: true, contentType: "application/json", body: {} },
+      { name: "Todo List", method: "GET", path: "/todos", auth: true, contentType: "application/json", body: {}, query: {} },
+      { name: "Todo Get By ID", method: "GET", path: "/todos/:id", auth: true, contentType: "application/json", body: {} },
+      { name: "Todo Update Completion", method: "PATCH", path: "/todos/:id/completion", auth: true, contentType: "application/json", body: { isCompleted: true } },
+      { name: "Todo Update", method: "PUT", path: "/todos/:id", auth: true, contentType: "application/json", body: { title: "Follow up updated" } },
+      { name: "Todo Delete", method: "DELETE", path: "/todos/:id", auth: true, contentType: "application/json", body: {} },
+
+      { name: "Holiday Delete", method: "DELETE", path: "/holidays/bulk", auth: true, contentType: "application/json", body: {ids: JSON.stringify(["1", "2", "3"])} },
+      { name: "Holiday Create", method: "POST", path: "/holidays", auth: true, contentType: "application/json", body: { name: "New Holiday", startDate: "2023-10-01", endDate: "2023-10-01" } },
+      { name: "Holiday Update", method: "PUT", path: "/holidays/:id", auth: true, contentType: "application/json", body: { name: "Updated Holiday", startDate: "2023-10-01", endDate: "2023-10-02" } },
+      { name: "Holiday Get By ID", method: "GET", path: "/holidays/:id", auth: true, contentType: "application/json", body: {} },
+      { name: "Holiday List", method: "GET", path: "/holidays", auth: true, contentType: "application/json", body: {}, query: {} },
+
+
+      { name: "Department Duty Create", method: "POST", path: "/duty-timings/departments", auth: true, contentType: "application/json", body: { departmentId: "2", startTime: "09:00", endTime: "17:00" } },
+        { name: "Department Duty List", method: "GET", path: "/duty-timings/departments", auth: true, contentType: "application/json", body: {}, query: {} },
+        { name: "Department Duty Get By ID", method: "GET", path: "/duty-timings/departments/:id", auth: true, contentType: "application/json", body: {} },
+        { name: "Department Duties By Department", method: "GET", path: "/duty-timings/departments/by-department/:departmentId", auth: true, contentType: "application/json", body: {} },
+        { name: "Department Duty Update", method: "PUT", path: "/duty-timings/departments/:id", auth: true, contentType: "application/json", body: { departmentId: "2", startTime: "08:30", endTime: "16:30" } },
+        { name: "Department Duty Delete", method: "DELETE", path: "/duty-timings/departments/:id", auth: true, contentType: "application/json", body: {} },
+        { name: "Employee Duty Create", method: "POST", path: "/duty-timings/employees", auth: true, contentType: "application/json", body: { employeeId: "5", startTime: "10:00", endTime: "18:00", validFrom: "2026-06-01", validTill: "2026-12-31" } },
+        { name: "Employee Duty List", method: "GET", path: "/duty-timings/employees", auth: true, contentType: "application/json", body: {}, query: {} },
+        { name: "Employee Duty Get By ID", method: "GET", path: "/duty-timings/employees/:id", auth: true, contentType: "application/json", body: {} },
+        { name: "Employee Duties By Employee", method: "GET", path: "/duty-timings/employees/by-employee/:employeeId", auth: true, contentType: "application/json", body: {} },
+        { name: "Employee Duty Update", method: "PUT", path: "/duty-timings/employees/:id", auth: true, contentType: "application/json", body: { employeeId: "5", startTime: "09:30", endTime: "17:30", validFrom: "2026-07-01", validTill: "2026-12-31" } },
+        { name: "Employee Duty Delete", method: "DELETE", path: "/duty-timings/employees/:id", auth: true, contentType: "application/json", body: {} },
+
+        { name: "Attendance Mark", method: "POST", path: "/attendances/mark", auth: true, contentType: "application/json", body: { employee_id: "1", date: "2026-06-22", status: "Present", check_in_time: "09:00", check_out_time: "17:00", remarks: "Full day present" } },
+        { name: "Attendance List", method: "GET", path: "/attendances", auth: true, contentType: "application/json" },
+        { name: "Attendance By Employee", method: "GET", path: "/attendances/employee/1", auth: true, contentType: "application/json" },
+        { name: "Attendance Update", method: "PUT", path: "/attendances/1", auth: true, contentType: "application/json", body: { status: "Present", check_in_time: "09:15", check_out_time: "17:10", remarks: "Updated attendance" } },
+        { name: "Checkin", method: "POST", path: "/attendances/checkin", auth: true, contentType: "application/json", body: { remarks: "Starting work" } },
+        { name : "Checkout", method: "POST", path: "/attendances/checkout", auth: true, contentType: "application/json", body: { remarks: "Leaving work" } },  
+        { name: "Update Attendance", method: "PUT", path: "/attendances/27", auth: true, contentType: "application/json", body: { employee_id: "6", date: "2026-06-13", status: "Present", check_in_time: "09:00", check_out_time: "18:00", remarks: "Updated attendance by admin" } },
+        { name: "My Monthly Attendance", method: "GET", path: "/attendances/employee/monthly/2026-06", auth: true, contentType: "application/json" },
+
+
+        { name: "Termination Create", method: "POST", path: "/terminations/create", auth: true, contentType: "application/json", body: { employee_id: "1", date_of_joining:"2026-01-01",termination_date: "2026-06-22", termination_reason: "Poor performance", notes: "Terminated after review process." } },
+        { name: "Termination List", method: "GET", path: "/terminations", auth: true, contentType: "application/json" },
+        { name: "Termination By Employee", method: "GET", path: "/terminations/employee/1", auth: true, contentType: "application/json" },
+        { name: "Termination Update", method: "PUT", path: "/terminations/1", auth: true, contentType: "application/json", body: { termination_date: "2026-06-25", termination_reason: "Policy violation", notes: "Updated termination notes." } },
+        { name: "Termination Delete", method: "DELETE", path: "/terminations/1", auth: true, contentType: "application/json" },
+
+        { name: "Resignation Create", method: "POST", path: "/resignations/create", auth: true, contentType: "application/json", body: { employee_id: "1", resignation_date: "2026-06-22", last_working_day: "2026-07-22", resignation_reason: "Personal reasons", resignation_status: "Pending", notes: "Employee submitted resignation." } },
+        { name: "Resignation Create By Employee", method: "POST", path: "/resignations/employee/1", auth: true, contentType: "application/json", body: { resignation_date: "2026-06-22", last_working_day: "2026-07-22", resignation_reason: "Personal reasons", resignation_status: "Pending", notes: "Employee submitted resignation." } },
+        { name: "Resignation List", method: "GET", path: "/resignations", auth: true, contentType: "application/json" },
+        { name: "Resignation By Employee", method: "GET", path: "/resignations/employee/1", auth: true, contentType: "application/json" },
+        { name: "Resignation Update", method: "PUT", path: "/resignations/1", auth: true, contentType: "application/json", body: { last_working_day: "2026-07-30", resignation_status: "Approved", notes: "Approved by HR." } },
+        { name: "Resignation Update By Employee", method: "PUT", path: "/resignations/employee/1", auth: true, contentType: "application/json", body: { last_working_day: "2026-07-30", resignation_status: "Approved", notes: "Approved by HR." } },
+        { name: "Resignation Delete", method: "DELETE", path: "/resignations/1", auth: true, contentType: "application/json" },
+                
+
+        { name: "Overtime Create", method: "POST", path: "/overtimes/create", auth: true, contentType: "application/json", body: { employee_id: "1", date: "2026-06-22", check_in_time: "17:00", check_out_time: "20:30", remarks: "Worked extra hours" } },
+        { name: "Overtime List", method: "GET", path: "/overtimes", auth: true, contentType: "application/json" },
+        { name: "Overtime By Employee", method: "GET", path: "/overtimes/employee/1", auth: true, contentType: "application/json" },
+        { name: "Overtime Update", method: "PUT", path: "/overtimes/1", auth: true, contentType: "application/json", body: { check_in_time: "18:00", check_out_time: "21:00", remarks: "Updated overtime hours" } },
+        { name: "Overtime Delete", method: "DELETE", path: "/overtimes/1", auth: true, contentType: "application/json" },
+        { name: "Overtime Checkout", method: "POST", path: "/overtimes/1/checkout", auth: true, contentType: "application/json", body: { check_out_time: "21:00" } },
+        { name: "Overtime Checkin", method: "POST", path: "/overtimes/checkin", auth: true, contentType: "application/json", body: { remarks: "Starting overtime" } },
+
+
+        { name: "Salary Compute", method: "POST", path: "/salaries/compute", auth: true, contentType: "application/json", body: { employee_id: "1", start_date: "2026-06-01", end_date: "2026-06-30", attendance_days: 22, attendance_salary: 44000, overtime_hours: 10, overtime_salary: 5000, allowances: [{ name: "House Rent", amount: 3000 }, { name: "Medical", amount: 2000 }], deductions: [{ name: "Tax", amount: 1500 }, { name: "Late Fine", amount: 500 }], remarks: "June salary calculation" } },
+        { name: "Create Salary", method: "POST", path: "/salaries", auth: true, contentType: "application/json", body: { employee_id: "6", start_date: "2026-06-01", end_date: "2026-06-30", allowances: [{ name: "Bonus", amount: 5000 }], deductions: [{ name: "Fine", amount: 1000 }], remarks: "June salary generated for one employee" } },
+        { name: "Salary List", method: "GET", path: "/salaries", auth: true, contentType: "application/json" },
+        { name: "Salary By Employee", method: "GET", path: "/salaries/employee/1", auth: true, contentType: "application/json" },
+        { name: "Update Salary", method: "PUT", path: "/salaries/1", auth: true, contentType: "application/json", body: { start_date: "2026-06-01", end_date: "2026-06-30", allowances: [{ name: "Bonus", amount: 5000 }], deductions: [{ name: "Fine", amount: 1000 }], remarks: "Updated June salary" } },
+        { name: "Salary Bulk Generate", method: "POST", path: "/salaries/bulk-generate", auth: true, contentType: "application/json", body: { start_date: "2026-06-01", end_date: "2026-06-30" } },
+
+        { name: "Leave Create", method: "POST", path: "/leaves/create", auth: true, contentType: "multipart/form-data", body: { employee_id: "1", leave_policy_id: "1", start_date: "2026-06-25", end_date: "2026-06-27", description: "Family emergency", attachment: "file" } },
+        { name: "Leave List", method: "GET", path: "/leaves", auth: true, contentType: "application/json" },
+
+        { name: "Leave Policy Create", method: "POST", path: "/leave-policies", auth: true, contentType: "application/json", body: { leave_type: "Annual Leave", annual_days: 20, is_active: true } },
+        { name: "Leave Policy Get All", method: "GET", path: "/leave-policies", auth: true, contentType: "application/json" },
+        { name: "Leave Policy Update", method: "PUT", path: "/leave-policies/1", auth: true, contentType: "application/json", body: { leave_type: "Annual Leave Updated", annual_days: 25, is_active: true } },
+        { name: "Leave Policy Delete", method: "DELETE", path: "/leave-policies/1", auth: true, contentType: "application/json" },
+
+
+        {name:"Create Folder",method:"POST",path:"/file-manager/folder/create",auth:true,contentType:"application/json",body:{path:"documents",name:"new-folder"}},
+        {name:"Delete Folder",method:"DELETE",path:"/file-manager/folder/delete",auth:true,body:{path:"documents/new-folder"}},
+        {name:"Rename Folder",method:"PATCH",path:"/file-manager/folder/rename",auth:true,body:{oldPath:"documents/a",newPath:"documents/b"}},
+        {name:"Move Folder",method:"POST",path:"/file-manager/folder/move",auth:true,body:{from:"a",to:"b"}},
+        {name:"Copy Folder",method:"POST",path:"/file-manager/folder/copy",auth:true,body:{from:"a",to:"b"}},
+        {name:"Upload File",method:"POST",path:"/file-manager/file/upload",auth:true,contentType:"multipart/form-data",body:{file:"binary",path:"docs",filename:"file.pdf"}},
+        {name:"Delete File",method:"DELETE",path:"/file-manager/file/delete",auth:true,body:{path:"docs/file.pdf"}},
+        {name:"Rename File",method:"PATCH",path:"/file-manager/file/rename",auth:true,body:{oldPath:"a.pdf",newPath:"b.pdf"}},
+        {name:"Move File",method:"POST",path:"/file-manager/file/move",auth:true,body:{from:"a",to:"b"}},
+        {name:"Copy File",method:"POST",path:"/file-manager/file/copy",auth:true,body:{from:"a",to:"b"}},
+        {name:"Download ZIP",method:"GET",path:"/file-manager/folder/download-zip",auth:true,query:{path:"docs"}}
+
+    ];
+
+    const el = {
+      endpointList: document.getElementById("endpointList"),
+      baseUrl: document.getElementById("baseUrl"),
+      accessToken: document.getElementById("accessToken"),
+      refreshToken: document.getElementById("refreshToken"),
+      requestName: document.getElementById("requestName"),
+      requestMethod: document.getElementById("requestMethod"),
+      requestPath: document.getElementById("requestPath"),
+      requestQuery: document.getElementById("requestQuery"),
+      requestBody: document.getElementById("requestBody"),
+      contentType: document.getElementById("contentType"),
+      autoAuth: document.getElementById("autoAuth"),
+      multipartBlock: document.getElementById("multipartBlock"),
+      profileFile: document.getElementById("profileFile"),
+      documentFiles: document.getElementById("documentFiles"),
+      responseOutput: document.getElementById("responseOutput"),
+      responseMeta: document.getElementById("responseMeta"),
+      statusLine: document.getElementById("statusLine"),
+      loginEmail: document.getElementById("loginEmail"),
+      loginPassword: document.getElementById("loginPassword")
+    };
+
+    const methodClass = {
+      GET: "m-get",
+      POST: "m-post",
+      PUT: "m-put",
+      PATCH: "m-patch",
+      DELETE: "m-delete"
+    };
+
+    const tokenStoreKey = "tms_api_tester_tokens_v1";
+    let selectedIndex = 0;
+
+    const setStatus = (text) => {
+      el.statusLine.textContent = text;
+    };
+
+    const persistTokens = () => {
+      localStorage.setItem(tokenStoreKey, JSON.stringify({
+        accessToken: el.accessToken.value.trim(),
+        refreshToken: el.refreshToken.value.trim(),
+        baseUrl: el.baseUrl.value.trim()
+      }));
+      setStatus("Tokens saved locally.");
+    };
+
+    const loadTokens = () => {
+      const raw = localStorage.getItem(tokenStoreKey);
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        el.accessToken.value = parsed.accessToken || "";
+        el.refreshToken.value = parsed.refreshToken || "";
+        if (parsed.baseUrl) {
+          el.baseUrl.value = parsed.baseUrl;
+        }
+      } catch {
+        setStatus("Stored tokens could not be parsed.");
+      }
+    };
+
+    const clearTokens = () => {
+      localStorage.removeItem(tokenStoreKey);
+      el.accessToken.value = "";
+      el.refreshToken.value = "";
+      setStatus("Tokens cleared.");
+    };
+
+    const safeJsonParse = (input, fallback = {}) => {
+      if (!input || !input.trim()) return fallback;
+      return JSON.parse(input);
+    };
+
+    const setResponseMeta = (status, ms, url, method) => {
+      el.responseMeta.innerHTML = "";
+      const chips = [
+        { label: method, cls: methodClass[method] || "m-post" },
+        { label: `HTTP ${status}`, cls: status >= 200 && status < 300 ? "m-get" : "m-delete" },
+        { label: `${ms} ms`, cls: "m-put" },
+        { label: url, cls: "m-patch" }
+      ];
+
+      chips.forEach((chip) => {
+        const span = document.createElement("span");
+        span.className = `chip ${chip.cls}`;
+        span.textContent = chip.label;
+        el.responseMeta.appendChild(span);
+      });
+    };
+
+    const displayResponse = (payload) => {
+      const isObj = typeof payload === "object";
+      el.responseOutput.textContent = isObj
+        ? JSON.stringify(payload, null, 2)
+        : String(payload);
+    };
+
+    const normalizeUrl = (baseUrl, path, queryObj) => {
+      const cleanBase = baseUrl.replace(/\/$/, "");
+      const cleanPath = path.startsWith("/") ? path : `/${path}`;
+      const url = new URL(cleanBase + cleanPath);
+
+      Object.entries(queryObj || {}).forEach(([k, v]) => {
+        if (v === undefined || v === null || v === "") return;
+        url.searchParams.set(k, String(v));
+      });
+
+      return url.toString();
+    };
+
+    const buildRequestFromForm = () => {
+      const method = el.requestMethod.value.trim().toUpperCase();
+      const path = el.requestPath.value.trim();
+      const contentType = el.contentType.value;
+      const authEnabled = el.autoAuth.value === "yes";
+
+      const queryObj = safeJsonParse(el.requestQuery.value, {});
+      const bodyObj = safeJsonParse(el.requestBody.value, {});
+      const url = normalizeUrl(el.baseUrl.value.trim(), path, queryObj);
+
+      const headers = {};
+      if (authEnabled && el.accessToken.value.trim()) {
+        headers.Authorization = `Bearer ${el.accessToken.value.trim()}`;
+      }
+
+      let body;
+
+      if (method !== "GET" && method !== "DELETE") {
+        if (contentType === "multipart/form-data") {
+          const fd = new FormData();
+          Object.entries(bodyObj || {}).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            fd.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+          });
+
+          const profile = el.profileFile.files[0];
+          if (profile) {
+            fd.append("profile", profile);
+          }
+
+          Array.from(el.documentFiles.files).forEach((file) => {
+            fd.append("documents", file);
+          });
+
+          body = fd;
+        } else {
+          headers["Content-Type"] = "application/json";
+          body = JSON.stringify(bodyObj || {});
+        }
+      }
+
+      return { method, url, headers, body };
+    };
+
+    const sendCurrentRequest = async () => {
+      try {
+        const req = buildRequestFromForm();
+        setStatus("Sending request...");
+
+        const started = performance.now();
+        const response = await fetch(req.url, {
+          method: req.method,
+          headers: req.headers,
+          body: req.body
+        });
+        const ended = performance.now();
+
+        const rawText = await response.text();
+        let payload;
+        try {
+          payload = JSON.parse(rawText);
+        } catch {
+          payload = rawText;
+        }
+
+        setResponseMeta(response.status, Math.round(ended - started), req.url, req.method);
+        displayResponse(payload);
+
+        if (req.url.endsWith("/users/login") && response.ok && payload?.data) {
+          const maybeToken = payload.data.accessToken || payload.data.token || payload.accessToken || payload.token;
+          const maybeRefresh = payload.data.refreshToken || payload.refreshToken;
+
+          if (maybeToken) {
+            el.accessToken.value = maybeToken;
+          }
+          if (maybeRefresh) {
+            el.refreshToken.value = maybeRefresh;
+          }
+          persistTokens();
+          setStatus("Login request succeeded. Tokens updated.");
+        } else {
+          setStatus(response.ok ? "Request succeeded." : "Request completed with error status.");
+        }
+      } catch (error) {
+        setStatus("Request failed before reaching server.");
+        displayResponse({ error: error.message });
+        el.responseMeta.innerHTML = "";
+      }
+    };
+
+    const copyCurl = async () => {
+      try {
+        const req = buildRequestFromForm();
+        const headerParts = Object.entries(req.headers || {}).map(([k, v]) => `-H \"${k}: ${v}\"`).join(" ");
+        const bodyValue = req.body instanceof FormData ? "<multipart-form-data>" : (req.body || "");
+        const bodyPart = bodyValue ? `--data '${String(bodyValue).replace(/'/g, "'\\''")}'` : "";
+        const curl = `curl -X ${req.method} \"${req.url}\" ${headerParts} ${bodyPart}`.trim();
+        await navigator.clipboard.writeText(curl);
+        setStatus("cURL copied to clipboard.");
+      } catch {
+        setStatus("Could not copy cURL.");
+      }
+    };
+
+    const renderEndpointList = () => {
+      el.endpointList.innerHTML = "";
+
+      endpoints.forEach((ep, index) => {
+        const btn = document.createElement("button");
+        btn.className = `endpoint-item ${index === selectedIndex ? "active" : ""}`;
+        btn.type = "button";
+
+        const chip = document.createElement("span");
+        chip.className = `chip ${methodClass[ep.method] || "m-post"}`;
+        chip.textContent = ep.method;
+
+        const route = document.createElement("div");
+        route.className = "route mono";
+        route.textContent = `${ep.path} ${ep.auth ? "(auth)" : "(public)"}`;
+
+        btn.append(chip, route);
+
+        btn.addEventListener("click", () => {
+          selectedIndex = index;
+          loadEndpointToForm();
+          renderEndpointList();
+        });
+
+        el.endpointList.appendChild(btn);
+      });
+    };
+
+    const loadEndpointToForm = () => {
+      const ep = endpoints[selectedIndex];
+      el.requestName.value = ep.name;
+      el.requestMethod.value = ep.method;
+      el.requestPath.value = ep.path;
+      el.requestBody.value = JSON.stringify(ep.body || {}, null, 2);
+      el.requestQuery.value = JSON.stringify(ep.query || {}, null, 2);
+      el.contentType.value = ep.contentType || "application/json";
+      el.autoAuth.value = ep.auth ? "yes" : "no";
+      el.multipartBlock.classList.toggle("hidden", el.contentType.value !== "multipart/form-data");
+      setStatus(`Loaded: ${ep.name}`);
+    };
+
+    const runQuickLogin = async () => {
+      const email = el.loginEmail.value.trim();
+      const password = el.loginPassword.value;
+      if (!email || !password) {
+        setStatus("Login email and password are required.");
+        return;
+      }
+
+      const savedIndex = selectedIndex;
+      const loginIndex = endpoints.findIndex((ep) => ep.path === "/users/login");
+      if (loginIndex < 0) {
+        setStatus("Login endpoint config missing.");
+        return;
+      }
+
+      selectedIndex = loginIndex;
+      loadEndpointToForm();
+      el.requestBody.value = JSON.stringify({ email, password }, null, 2);
+      await sendCurrentRequest();
+      selectedIndex = savedIndex;
+      loadEndpointToForm();
+      renderEndpointList();
+    };
+
+    const runQuickRefresh = async () => {
+      const token = el.refreshToken.value.trim();
+      if (!token) {
+        setStatus("Refresh token is required.");
+        return;
+      }
+
+      const savedIndex = selectedIndex;
+      const refreshIndex = endpoints.findIndex((ep) => ep.path === "/users/refresh-token");
+      if (refreshIndex < 0) {
+        setStatus("Refresh endpoint config missing.");
+        return;
+      }
+
+      selectedIndex = refreshIndex;
+      loadEndpointToForm();
+      el.requestBody.value = JSON.stringify({ refreshToken: token }, null, 2);
+      await sendCurrentRequest();
+      selectedIndex = savedIndex;
+      loadEndpointToForm();
+      renderEndpointList();
+    };
+
+    document.getElementById("btnSend").addEventListener("click", sendCurrentRequest);
+    document.getElementById("btnCopyCurl").addEventListener("click", copyCurl);
+    document.getElementById("btnSaveTokens").addEventListener("click", persistTokens);
+    document.getElementById("btnClearTokens").addEventListener("click", clearTokens);
+    document.getElementById("btnLogin").addEventListener("click", runQuickLogin);
+    document.getElementById("btnRefresh").addEventListener("click", runQuickRefresh);
+    el.contentType.addEventListener("change", () => {
+      el.multipartBlock.classList.toggle("hidden", el.contentType.value !== "multipart/form-data");
+    });
+
+    loadTokens();
+    renderEndpointList();
+    loadEndpointToForm();
+  </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!-- html/task-notification-test.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Task Notification Test</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>Employee Task Notification Test</h2>
+
+  <label>JWT Token:</label><br />
+  <input id="token" style="width: 500px;" placeholder="Paste employee access token" />
+  <br /><br />
+
+  <button onclick="connectSocket()">Connect Employee Socket</button>
+
+  <h3>Status:</h3>
+  <pre id="status">Not connected</pre>
+
+  <h3>Notifications:</h3>
+  <div id="notifications"></div>
+
+<script>
+  let socket;
+
+  function connectSocket() {
+    const token = document.getElementById("token").value;
+
+    socket = io("http://localhost:3000", {
+      auth: {
+        token: token
+      }
+    });
+
+    socket.on("connect", () => {
+      document.getElementById("status").innerText =
+        "Connected: " + socket.id;
+
+      socket.emit("register_user", (res) => {
+        console.log("register_user response:", res);
+      });
+    });
+
+    socket.on("registered", (data) => {
+      document.getElementById("status").innerText =
+        "Registered as user: " + data.userId;
+    });
+
+    // ==========================
+    // TASK NOTIFICATIONS
+    // ==========================
+    socket.on("task_assigned", (data) => {
+      console.log("Task assigned notification:", data);
+
+      const box = document.createElement("div");
+
+      box.style.border = "2px solid green";
+      box.style.padding = "12px";
+      box.style.marginBottom = "10px";
+
+      box.innerHTML = `
+        <h4>📝 ${data.title}</h4>
+        <p>${data.message}</p>
+        <p><b>Task:</b> ${data.task.name}</p>
+        <p><b>Status:</b> ${data.task.status}</p>
+      `;
+
+      document
+        .getElementById("notifications")
+        .prepend(box);
+
+      alert(data.message);
+    });
+
+    // ==========================
+    // TODO NOTIFICATIONS
+    // ==========================
+    socket.on("todo_assigned", (data) => {
+      console.log("Todo assigned notification:", data);
+
+      const box = document.createElement("div");
+
+      box.style.border = "2px solid blue";
+      box.style.padding = "12px";
+      box.style.marginBottom = "10px";
+
+      box.innerHTML = `
+        <h4>✅ ${data.title}</h4>
+        <p>${data.message}</p>
+        <p><b>Todo:</b> ${data.todo.title}</p>
+        <p><b>Priority:</b> ${data.todo.priority || "None"}</p>
+        <p><b>Completed:</b> ${
+          data.todo.is_completed ? "Yes" : "No"
+        }</p>
+      `;
+
+      document
+        .getElementById("notifications")
+        .prepend(box);
+
+      alert(data.message);
+    });
+
+
+
+    // ==========================
+    // Termination Notification
+    // ==========================
+   socket.on("termination_created", (data) => {
+  console.log("Termination notification:", data);
+  alert(data.message);
+});
+
+socket.on("event_created", (data) => {
+  console.log("New event:", data);
+  alert(data.message);
+});
+
+
+    socket.on("connect_error", (err) => {
+      document.getElementById("status").innerText =
+        "Connection error: " + err.message;
+    });
+
+    socket.on("disconnect", () => {
+      document.getElementById("status").innerText =
+        "Disconnected";
+    });
+  }
+</script>
+</body>
+</html>
